@@ -15,6 +15,15 @@ function Dashboard() {
   const [newPostContent, setNewPostContent] = useState('');
   const navigate = useNavigate();
 
+  // Har new login/session ke liye current login time capture karte hain
+  const [sessionStartTime] = useState(() => {
+    const saved = localStorage.getItem('sessionStartTime');
+    if (saved) return Number(saved);
+    const now = Date.now();
+    localStorage.setItem('sessionStartTime', now.toString());
+    return now;
+  });
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -52,7 +61,13 @@ function Dashboard() {
     const fetchPosts = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/api/posts/${selectedCommunity._id}`);
-        setPosts(res.data);
+        // Filter posts to only show messages created during or after current user session
+        const freshPosts = res.data.filter((post) => {
+          if (!post.createdAt) return true;
+          const postTime = new Date(post.createdAt).getTime();
+          return isNaN(postTime) || postTime >= sessionStartTime;
+        });
+        setPosts(freshPosts);
       } catch (err) {
         console.error("Error fetching posts:", err);
       }
@@ -62,11 +77,12 @@ function Dashboard() {
 
     const interval = setInterval(fetchPosts, 3000);
     return () => clearInterval(interval);
-  }, [selectedCommunity]);
+  }, [selectedCommunity, sessionStartTime]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('sessionStartTime');
     localStorage.clear();
     setPosts([]);
     setSelectedCommunity(null);
@@ -81,12 +97,12 @@ function Dashboard() {
       communityId: selectedCommunity._id,
       author: userProfile.username,
       content: newPostContent,
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      createdAt: new Date().toISOString()
     };
 
     try {
       const res = await axios.post(`${API_BASE_URL}/api/posts`, postData);
-      setPosts([res.data, ...posts]);
+      setPosts((prevPosts) => [res.data, ...prevPosts]);
       setNewPostContent('');
     } catch (err) {
       console.error("Error creating post:", err);
@@ -259,14 +275,16 @@ function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {posts.length === 0 ? (
                     <p style={{ color: '#64748b', fontStyle: 'italic', margin: 0 }}>
-                      No posts yet in this community. Be the first to start a discussion!
+                      No posts yet in this session. Be the first to start a discussion!
                     </p>
                   ) : (
                     posts.map((post) => (
-                      <div key={post._id} style={styles.postItem}>
+                      <div key={post._id || Math.random()} style={styles.postItem}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
                           <strong style={{ color: '#38bdf8' }}>{post.author}</strong>
-                          <span style={{ color: '#64748b' }}>{post.createdAt}</span>
+                          <span style={{ color: '#64748b' }}>
+                            {post.createdAt ? new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                          </span>
                         </div>
                         <p style={{ margin: 0, color: '#e2e8f0', wordBreak: 'break-word', lineHeight: '1.5' }}>{post.content}</p>
                       </div>
@@ -448,6 +466,7 @@ const styles = {
     paddingRight: '5px',
   },
   communitiesGrid: {
+    display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: '20px',
   },
