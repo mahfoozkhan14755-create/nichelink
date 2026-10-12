@@ -21,37 +21,37 @@ app.use(cors());
 const Community = require('./models/Community');
 const Post = require('./models/Post'); 
 
-// Default Communities Seeding Function
+// Default Communities Re-creation & Fresh Seeding Function
 const seedCommunities = async () => {
   try {
-    const count = await Community.countDocuments();
-    if (count === 0) {
-      await Community.insertMany([
-        {
-          name: "SaaS Founders",
-          description: "A place for SaaS creators and builders to share growth tips, MRR milestones, and scaling strategies.",
-          category: "tech"
-        },
-        {
-          name: "AI & LLM Builders",
-          description: "Discussing prompt engineering, fine-tuning open-source models, and integrating AI into modern web apps.",
-          category: "AI"
-        },
-        {
-          name: "Remote UI/UX Designers",
-          description: "Showcasing high-end SaaS designs, design systems, wireframes, and modern user experience feedback.",
-          category: "design"
-        },
-        {
-          name: "Full Stack Masterminds",
-          description: "Deep dive into MERN stack architecture, microservices, database optimizations, and robust API scaling.",
-          category: "development"
-        }
-      ]);
-      console.log("⚡ Default micro-communities seeded successfully!");
-    }
+    // Purani communities aur posts ko clean karne ke liye fresh re-create karte hain
+    await Community.deleteMany({});
+    
+    await Community.insertMany([
+      {
+        name: "SaaS Founders",
+        description: "A place for SaaS creators and builders to share growth tips, MRR milestones, and scaling strategies.",
+        category: "tech"
+      },
+      {
+        name: "AI & LLM Builders",
+        description: "Discussing prompt engineering, fine-tuning open-source models, and integrating AI into modern web apps.",
+        category: "AI"
+      },
+      {
+        name: "Remote UI/UX Designers",
+        description: "Showcasing high-end SaaS designs, design systems, wireframes, and modern user experience feedback.",
+        category: "design"
+      },
+      {
+        name: "Full Stack Masterminds",
+        description: "Deep dive into MERN stack architecture, microservices, database optimizations, and robust API scaling.",
+        category: "development"
+      }
+    ]);
+    console.log("⚡ Fresh micro-communities re-created successfully!");
   } catch (err) {
-    console.error("Error seeding communities:", err);
+    console.error("Error re-creating communities:", err);
   }
 };
 
