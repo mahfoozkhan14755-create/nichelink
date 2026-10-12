@@ -21,7 +21,8 @@ function Dashboard() {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          navigate('/login');
+          localStorage.clear();
+          navigate('/login', { replace: true });
           return;
         }
 
@@ -38,7 +39,8 @@ function Dashboard() {
         setUserProfile(profileRes.data);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        setError('Failed to load dashboard data');
+        localStorage.clear();
+        navigate('/login', { replace: true });
       }
     };
 
@@ -64,13 +66,12 @@ function Dashboard() {
   }, [selectedCommunity]);
 
   const handleLogout = () => {
-    // Clear storage and reset session chats completely
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.clear();
     setPosts([]);
     setSelectedCommunity(null);
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const handleCreatePost = async (e) => {
@@ -450,8 +451,7 @@ const styles = {
     paddingRight: '5px',
   },
   communitiesGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    GridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: '20px',
   },
   communityCard: {
