@@ -13,7 +13,6 @@ function Dashboard() {
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [posts, setPosts] = useState([]);
   const [newPostContent, setNewPostContent] = useState('');
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -193,8 +192,6 @@ function Dashboard() {
 
         {/* Dynamic Body Content Area */}
         <main style={styles.contentArea}>
-          {error && <div style={styles.errorAlert}>{error}</div>}
-
           {/* COMMUNITIES TAB: All Communities Grid */}
           {activeTab === 'communities' && !selectedCommunity && (
             <div>
@@ -451,7 +448,7 @@ const styles = {
     paddingRight: '5px',
   },
   communitiesGrid: {
-    GridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: '20px',
   },
   communityCard: {
@@ -532,15 +529,6 @@ const styles = {
     border: '1px solid rgba(255, 255, 255, 0.06)',
     padding: '14px 16px',
     borderRadius: '10px',
-  },
-  errorAlert: {
-    background: 'rgba(239, 68, 68, 0.15)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
-    color: '#fca5a5',
-    padding: '10px 14px',
-    borderRadius: '8px',
-    fontSize: '13px',
-    marginBottom: '15px',
   },
 };
 
