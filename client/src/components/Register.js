@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -12,11 +14,11 @@ function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/auth/register', { username, email, password });
+      await axios.post(`${API_BASE_URL}/api/auth/register`, { username, email, password });
       alert('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed');
     }
   };
 
@@ -54,6 +56,7 @@ function Register() {
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
               style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box', outline: 'none', fontSize: '14px' }}
+              required
             />
           </div>
 
@@ -65,6 +68,7 @@ function Register() {
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box', outline: 'none', fontSize: '14px' }}
+              required
             />
           </div>
 
@@ -76,6 +80,7 @@ function Register() {
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
               style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box', outline: 'none', fontSize: '14px' }}
+              required
             />
           </div>
 

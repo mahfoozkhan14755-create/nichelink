@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import JobBoard from './JobBoard';
 import Chats from './Chats';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 function Dashboard() {
   const [communities, setCommunities] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
@@ -28,8 +30,8 @@ function Dashboard() {
         };
 
         const [commRes, profileRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/communities', config),
-          axios.get('http://localhost:5000/api/auth/profile', config)
+          axios.get(`${API_BASE_URL}/api/communities`, config),
+          axios.get(`${API_BASE_URL}/api/auth/profile`, config)
         ]);
 
         setCommunities(commRes.data);
@@ -48,7 +50,7 @@ function Dashboard() {
 
     const fetchPosts = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/posts/${selectedCommunity._id}`);
+        const res = await axios.get(`${API_BASE_URL}/api/posts/${selectedCommunity._id}`);
         setPosts(res.data);
       } catch (err) {
         console.error("Error fetching posts:", err);
@@ -62,7 +64,12 @@ function Dashboard() {
   }, [selectedCommunity]);
 
   const handleLogout = () => {
+    // Clear storage and reset session chats completely
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.clear();
+    setPosts([]);
+    setSelectedCommunity(null);
     navigate('/login');
   };
 
@@ -78,7 +85,7 @@ function Dashboard() {
     };
 
     try {
-      const res = await axios.post('http://localhost:5000/api/posts', postData);
+      const res = await axios.post(`${API_BASE_URL}/api/posts`, postData);
       setPosts([res.data, ...posts]);
       setNewPostContent('');
     } catch (err) {
@@ -89,7 +96,7 @@ function Dashboard() {
   const handleSimulateUpgrade = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.put('http://localhost:5000/api/auth/upgrade', {}, {
+      const res = await axios.put(`${API_BASE_URL}/api/auth/upgrade`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUserProfile(res.data);
@@ -311,7 +318,7 @@ const styles = {
     height: '100vh',
     maxHeight: '100vh',
     overflow: 'hidden',
-    backgroundColor: '#0f172a', // Dark Midnight Slate
+    backgroundColor: '#0f172a',
     backgroundImage: 'radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 40%)',
     color: '#f8fafc',
     fontFamily: "'Inter', 'Segoe UI', sans-serif",
