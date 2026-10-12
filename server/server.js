@@ -19,7 +19,7 @@ app.use(cors());
 
 // Models Import
 const Community = require('./models/Community');
-const Post = require('./models/Post'); // Added for clearing community posts
+const Post = require('./models/Post'); 
 
 // Default Communities Seeding Function
 const seedCommunities = async () => {
@@ -55,23 +55,20 @@ const seedCommunities = async () => {
   }
 };
 
-// Function to wipe all old historical posts automatically on boot
-const wipeAllHistoricalPosts = async () => {
-  try {
-    await Post.deleteMany({});
-    console.log("🧹 All historical database community chats cleared successfully!");
-  } catch (err) {
-    console.error("Error clearing old posts:", err);
-  }
-};
-
-// MongoDB Connection
+// MongoDB Connection & Forceful Direct Wipe of All Posts Collection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nichelink';
 mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log('MongoDB Connected successfully');
-    await seedCommunities(); // Trigger community seeding on successful connection
-    await wipeAllHistoricalPosts(); // Automatically wipes out all old database chats
+    await seedCommunities();
+    
+    // Forcefully wipe all documents in Post collection on every boot/restart
+    try {
+      const deleteResult = await Post.deleteMany({});
+      console.log(`🧹 Force-wiped ${deleteResult.deletedCount} old posts from database!`);
+    } catch (wipeErr) {
+      console.error("Error during force wipe:", wipeErr);
+    }
   })
   .catch(err => console.log('MongoDB Connection Error:', err));
 
