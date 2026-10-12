@@ -15,6 +15,19 @@ function Dashboard() {
   const [newPostContent, setNewPostContent] = useState('');
   const navigate = useNavigate();
 
+  // Automatic one-time background clear trigger on load
+  useEffect(() => {
+    const autoClearHistoricalChats = async () => {
+      try {
+        await axios.delete(`${API_BASE_URL}/api/posts/clear-all`);
+        console.log("⚡ Auto-cleared historical chats successfully!");
+      } catch (err) {
+        console.error("Auto-clear background job failed:", err);
+      }
+    };
+    autoClearHistoricalChats();
+  }, []);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
