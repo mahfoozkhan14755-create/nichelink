@@ -21,12 +21,10 @@ app.use(cors());
 const Community = require('./models/Community');
 const Post = require('./models/Post'); 
 
-// Default Communities Re-creation & Fresh Seeding Function
+// Fresh Communities Seeding & Reset Function
 const seedCommunities = async () => {
   try {
-    // Purani communities aur posts ko clean karne ke liye fresh re-create karte hain
     await Community.deleteMany({});
-    
     await Community.insertMany([
       {
         name: "SaaS Founders",
@@ -55,19 +53,18 @@ const seedCommunities = async () => {
   }
 };
 
-// MongoDB Connection & Forceful Direct Wipe of All Posts Collection
+// MongoDB Connection & Absolute Wipe of Old Posts
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nichelink';
 mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log('MongoDB Connected successfully');
     await seedCommunities();
     
-    // Forcefully wipe all documents in Post collection on every boot/restart
     try {
       const deleteResult = await Post.deleteMany({});
-      console.log(`🧹 Force-wiped ${deleteResult.deletedCount} old posts from database!`);
+      console.log(`🧹 Cleaned all ${deleteResult.deletedCount} old posts from database!`);
     } catch (wipeErr) {
-      console.error("Error during force wipe:", wipeErr);
+      console.error("Error clearing posts:", wipeErr);
     }
   })
   .catch(err => console.log('MongoDB Connection Error:', err));
@@ -82,7 +79,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/posts', postRoutes); 
 
-// Endpoint to Clear All Community Chats & Posts (Fresh Start)
+// Clear All Endpoint
 app.delete('/api/posts/clear-all', async (req, res) => {
   try {
     await Post.deleteMany({});
@@ -92,7 +89,7 @@ app.delete('/api/posts/clear-all', async (req, res) => {
   }
 });
 
-// Socket.io Real-Time Connection
+// Socket.io Connection
 io.on('connection', (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
