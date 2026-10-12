@@ -17,8 +17,9 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(cors());
 
-// Community Model Import
+// Models Import
 const Community = require('./models/Community');
+const Post = require('./models/Post'); // Added for clearing community posts
 
 // Default Communities Seeding Function
 const seedCommunities = async () => {
@@ -72,6 +73,16 @@ const postRoutes = require('./routes/posts');
 app.use('/api/auth', authRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/posts', postRoutes); 
+
+// Endpoint to Clear All Community Chats & Posts (Fresh Start)
+app.delete('/api/posts/clear-all', async (req, res) => {
+  try {
+    await Post.deleteMany({});
+    res.status(200).json({ message: 'All community chats cleared successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clear posts' });
+  }
+});
 
 // Socket.io Real-Time Connection
 io.on('connection', (socket) => {
