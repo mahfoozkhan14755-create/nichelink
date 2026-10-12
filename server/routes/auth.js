@@ -8,7 +8,6 @@ router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Check if user already exists in DB
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       return res.status(400).json({ error: 'Already exist' });
@@ -21,11 +20,10 @@ router.post('/register', async (req, res) => {
     const savedUser = await newUser.save();
     res.status(201).json(savedUser);
   } catch (err) {
-    // Handle MongoDB duplicate key error (code 11000)
     if (err.code === 11000) {
       return res.status(400).json({ error: 'Already exist' });
     }
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Already exist' });
   }
 });
 

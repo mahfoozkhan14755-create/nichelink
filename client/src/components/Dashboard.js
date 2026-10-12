@@ -15,7 +15,6 @@ function Dashboard() {
   const [newPostContent, setNewPostContent] = useState('');
   const navigate = useNavigate();
 
-  // Har new login/session ke liye current login time capture karte hain
   const [sessionStartTime] = useState(() => {
     const saved = localStorage.getItem('sessionStartTime');
     if (saved) return Number(saved);
@@ -61,7 +60,6 @@ function Dashboard() {
     const fetchPosts = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/api/posts/${selectedCommunity._id}`);
-        // Filter posts to only show messages created during or after current user session
         const freshPosts = res.data.filter((post) => {
           if (!post.createdAt) return true;
           const postTime = new Date(post.createdAt).getTime();
@@ -80,9 +78,6 @@ function Dashboard() {
   }, [selectedCommunity, sessionStartTime]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('sessionStartTime');
     localStorage.clear();
     setPosts([]);
     setSelectedCommunity(null);
@@ -208,7 +203,6 @@ function Dashboard() {
 
         {/* Dynamic Body Content Area */}
         <main style={styles.contentArea}>
-          {/* COMMUNITIES TAB: All Communities Grid */}
           {activeTab === 'communities' && !selectedCommunity && (
             <div>
               <h3 style={{ margin: '0 0 20px 0', color: '#c084fc', fontSize: '18px' }}>Available Micro-Communities (Tribes)</h3>
@@ -236,7 +230,6 @@ function Dashboard() {
             </div>
           )}
 
-          {/* COMMUNITIES TAB: Single Selected Community Discussion */}
           {activeTab === 'communities' && selectedCommunity && (
             <div>
               <button 
@@ -295,13 +288,9 @@ function Dashboard() {
             </div>
           )}
 
-          {/* JOBS TAB */}
           {activeTab === 'jobs' && <JobBoard userProfile={userProfile} />}
-
-          {/* CHATS TAB */}
           {activeTab === 'chats' && <Chats />}
 
-          {/* UPGRADE TAB */}
           {activeTab === 'upgrade' && (
             <div style={{ ...styles.cardPanel, textAlign: 'center', maxWidth: '650px', margin: '40px auto 0 auto', padding: '40px' }}>
               <h2 style={{ color: '#c084fc', margin: '0 0 15px 0' }}>Unlock Full Platform Power with NicheLink Pro</h2>

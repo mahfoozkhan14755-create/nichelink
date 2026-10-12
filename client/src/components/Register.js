@@ -18,7 +18,7 @@ function Register() {
       alert('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed');
+      setError('Already exist');
     }
   };
 
