@@ -55,12 +55,23 @@ const seedCommunities = async () => {
   }
 };
 
+// Function to wipe all old historical posts automatically on boot
+const wipeAllHistoricalPosts = async () => {
+  try {
+    await Post.deleteMany({});
+    console.log("🧹 All historical database community chats cleared successfully!");
+  } catch (err) {
+    console.error("Error clearing old posts:", err);
+  }
+};
+
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nichelink';
 mongoose.connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB Connected successfully');
-    seedCommunities(); // Trigger community seeding on successful connection
+    await seedCommunities(); // Trigger community seeding on successful connection
+    await wipeAllHistoricalPosts(); // Automatically wipes out all old database chats
   })
   .catch(err => console.log('MongoDB Connection Error:', err));
 
