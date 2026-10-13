@@ -5,10 +5,12 @@ import io from 'socket.io-client';
 import JobBoard from './JobBoard';
 import Chats from './Chats';
 
+// Dynamic Base URL for local development and deployed Vercel production
 const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:5000' 
   : 'https://nichelink-backend.onrender.com';
 
+// Global single socket connection instance
 const socket = io(API_BASE_URL, {
   transports: ['websocket', 'polling']
 });
@@ -53,12 +55,16 @@ function Dashboard() {
     fetchDashboardData();
   }, [navigate]);
 
+  // Real-time Socket Room Join and Live Sync Handler
   useEffect(() => {
     if (selectedCommunity) {
+      // Load historical chats for this specific community
       fetchCommunityPosts(selectedCommunity.id);
 
+      // Join isolated socket room
       socket.emit('join_community', selectedCommunity.id);
 
+      // Listener for incoming messages from other connected users
       const handleCommunityMessage = (data) => {
         if (data.communityId === selectedCommunity.id) {
           setCommunityPosts((prev) => {
@@ -111,10 +117,10 @@ function Dashboard() {
     const textToSend = newContent;
     setNewContent('');
 
-    // Emit live message via Socket.io to other users in the same room
+    // Emit live message via Socket.io to all users in the same room
     socket.emit('send_community_message', messageData);
 
-    // Save to Database via API with exact communityId
+    // Persist to Database via API
     try {
       const res = await axios.post(`${API_BASE_URL}/api/posts`, {
         communityId: selectedCommunity.id,
