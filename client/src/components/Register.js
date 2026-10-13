@@ -19,8 +19,16 @@ function Register() {
       alert('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Registration failed';
-      setError(errorMsg);
+      console.error('Full registration error:', err);
+      // Catch all possible error structures from backend or network
+      const errorMsg = 
+        err.response?.data?.error || 
+        err.response?.data?.message || 
+        err.response?.data || 
+        err.message || 
+        'Registration failed';
+      
+      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
     }
   };
 
