@@ -316,6 +316,5 @@ const styles = {
     boxShadow: '0 4px 16px rgba(168, 85, 247, 0.3)',
   },
 };
-haha
 
 export default Dashboard;
