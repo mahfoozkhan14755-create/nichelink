@@ -8,9 +8,16 @@ router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Already exist' });
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    // Check if username already exists
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(400).json({ error: 'Username already taken' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -20,10 +27,7 @@ router.post('/register', async (req, res) => {
     const savedUser = await newUser.save();
     res.status(201).json(savedUser);
   } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({ error: 'Already exist' });
-    }
-    res.status(500).json({ error: 'Already exist' });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -32,10 +36,10 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) return res.status(404).json({ message: 'User not found with this email' });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials or incorrect password' });
 
     const token = jwt.sign({ id: user._id, isPro: user.isPro }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
     res.json({ token, user: { id: user._id, username: user.username, email: user.email, isPro: user.isPro } });

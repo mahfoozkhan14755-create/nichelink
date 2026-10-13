@@ -13,12 +13,14 @@ function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       await axios.post(`${API_BASE_URL}/api/auth/register`, { username, email, password });
       alert('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
-      setError('Already exist');
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Registration failed';
+      setError(errorMsg);
     }
   };
 
@@ -45,7 +47,7 @@ function Register() {
           <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Join NicheLink micro-communities today</p>
         </div>
 
-        {error && <div style={{ background: '#fee2e2', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px', textAlign: 'center' }}>{error}</div>}
+        {error && <div style={{ background: '#fee2e2', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px', textAlign: 'center', fontWeight: '600' }}>{error}</div>}
 
         <form onSubmit={handleRegister}>
           <div style={{ marginBottom: '16px' }}>

@@ -12,13 +12,15 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       const res = await axios.post(`${API_BASE_URL}/api/auth/login`, { email, password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials');
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Invalid credentials';
+      setError(errorMsg);
     }
   };
 
@@ -45,7 +47,7 @@ function Login() {
           <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Login to access your remote professional dashboard</p>
         </div>
 
-        {error && <div style={{ background: '#fee2e2', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px', textAlign: 'center' }}>{error}</div>}
+        {error && <div style={{ background: '#fee2e2', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px', textAlign: 'center', fontWeight: '600' }}>{error}</div>}
 
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '16px' }}>
