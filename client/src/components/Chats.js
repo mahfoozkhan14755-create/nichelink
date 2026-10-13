@@ -1,140 +1,155 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 
-function Chats() {
-  const [room, setRoom] = useState('general');
-  const [message, setMessage] = useState('');
-  const [messageList, setMessageList] = useState([]);
-  const [username, setUsername] = useState('User');
-  
-  const socketRef = useRef(null);
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : 'https://nichelink-exke.onrender.com';
 
-  // Fetch logged-in username securely from backend token
+// Direct socket instance for real-time global chat sync
+const socket = io(API_BASE_URL, {
+  transports: ['websocket', 'polling'],
+  forceNew: true,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000
+});
+
+function Chats() {
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [currentUser, setCurrentUser] = useState('Member');
+
   useEffect(() => {
-    const fetchUser = async () => {
+    // Fetch logged in username from localStorage
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const res = await axios.get('http://localhost:5000/api/auth/profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.data && res.data.username) {
-          setUsername(res.data.username);
-        }
-      } catch (err) {
-        console.error("Error fetching chat user profile:", err);
+        const parsed = JSON.parse(savedUser);
+        if (parsed.username) setCurrentUser(parsed.username);
+      } catch (e) {
+        console.error(e);
       }
+    }
+
+    // Join global room on mount
+    socket.emit('join_community', 'global_chat');
+
+    // Listen for incoming live real-time messages
+    const handleGlobalMessage = (data) => {
+      setMessages((prev) => {
+        const exists = prev.some(m => m._id === data._id);
+        if (exists) return prev;
+        return [...prev, data];
+      });
     };
-    fetchUser();
+
+    socket.on('receive_community_message', handleGlobalMessage);
+
+    return () => {
+      socket.emit('leave_community', 'global_chat');
+      socket.off('receive_community_message', handleGlobalMessage);
+    };
   }, []);
 
-  useEffect(() => {
-    // Initialize socket connection
-    socketRef.current = io('http://localhost:5000');
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
 
-    // Join room
-    socketRef.current.emit('join_room', room);
-
-    // Listen for incoming messages in real-time
-    const handleReceiveMessage = (data) => {
-      setMessageList((list) => [...list, data]);
+    const messageData = {
+      _id: Date.now().toString(),
+      communityId: 'global_chat',
+      author: currentUser,
+      content: newMessage.trim(),
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    socketRef.current.on('receive_message', handleReceiveMessage);
+    // Emit live socket event to all clients
+    socket.emit('send_community_message', messageData);
 
-    // Cleanup on unmount or room change
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off('receive_message', handleReceiveMessage);
-        socketRef.current.disconnect();
-      }
-    };
-  }, [room]);
-
-  const sendMessage = async () => {
-    if (message.trim() !== '' && socketRef.current) {
-      const messageData = {
-        room: room,
-        author: username,
-        message: message,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      // Emit message to server for real-time broadcast
-      socketRef.current.emit('send_message', messageData);
-      
-      // Append locally
-      setMessageList((list) => [...list, messageData]);
-      setMessage('');
-    }
+    // Update local chat view immediately
+    setMessages((prev) => [...prev, messageData]);
+    setNewMessage('');
   };
 
   return (
-    <div style={{ background: 'white', padding: '25px', borderRadius: '8px', border: '1px solid #ddd', maxWidth: '800px', margin: '0 auto' }}>
-      <h3 style={{ marginTop: 0, color: '#2c3e50' }}>Real-Time Community Chat (Logged in as: {username})</h3>
-      
-      {/* Room Selector */}
-      <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <label style={{ fontWeight: 'bold' }}>Select Room: </label>
-        <select 
-          value={room} 
-          onChange={(e) => {
-            setRoom(e.target.value);
-            setMessageList([]);
-          }} 
-          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-        >
-          <option value="general">General</option>
-          <option value="tech">Tech & SaaS</option>
-          <option value="design">Design & Remote</option>
-        </select>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: 'calc(100vh - 140px)',
+      background: '#1e293b',
+      borderRadius: '14px',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      padding: '20px',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '15px' }}>
+        <h3 style={{ margin: 0, color: '#f8fafc' }}>💬 Live Global Community Chat</h3>
+        <span style={{ fontSize: '12px', color: '#10b981' }}>● Socket Connected Real-Time</span>
       </div>
 
-      {/* Chat Messages Box */}
-      <div style={{ height: '400px', border: '1px solid #e1e8ed', borderRadius: '6px', padding: '15px', overflowY: 'scroll', display: 'flex', flexDirection: 'column', gap: '12px', background: '#f8f9fa' }}>
-        {messageList.map((msgContent, index) => {
-          const isMe = msgContent.author === username;
-          return (
-            <div key={index} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
-              <div style={{ fontSize: '11px', color: '#666', marginBottom: '3px', textAlign: isMe ? 'right' : 'left' }}>
-                {isMe ? 'You' : msgContent.author}
+      {/* Messages Feed Area */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '5px' }}>
+        {messages.length === 0 ? (
+          <p style={{ color: '#94a3b8', textAlign: 'center', marginTop: '40px' }}>No messages yet. Send the first message!</p>
+        ) : (
+          messages.map((msg, index) => {
+            const isMe = msg.author === currentUser;
+            return (
+              <div 
+                key={msg._id || index} 
+                style={{
+                  alignSelf: isMe ? 'flex-end' : 'flex-start',
+                  maxWidth: '70%',
+                  background: isMe ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : '#0f172a',
+                  color: '#ffffff',
+                  padding: '10px 14px',
+                  borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                }}
+              >
+                <div style={{ fontSize: '11px', color: isMe ? '#c7d2fe' : '#818cf8', fontWeight: 'bold', marginBottom: '4px' }}>
+                  {msg.author} • <span style={{ opacity: 0.8 }}>{msg.createdAt}</span>
+                </div>
+                <div style={{ fontSize: '14px', lineHeight: '1.4' }}>{msg.content}</div>
               </div>
-              <div style={{ 
-                background: isMe ? '#007bff' : '#e4e6eb', 
-                color: isMe ? 'white' : 'black', 
-                padding: '10px 14px', 
-                borderRadius: '12px', 
-                wordBreak: 'break-word',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-              }}>
-                {msgContent.message}
-              </div>
-              <div style={{ fontSize: '10px', color: '#999', marginTop: '2px', textAlign: isMe ? 'right' : 'left' }}>
-                {msgContent.time}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
-      {/* Input Area */}
-      <div style={{ display: 'flex', marginTop: '15px', gap: '10px' }}>
-        <input
-          type="text"
-          value={message}
-          placeholder="Type a message..."
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '14px' }}
+      {/* Input Message Form */}
+      <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+        <input 
+          type="text" 
+          placeholder="Type a message to real-time chat..."
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          style={{
+            flex: 1,
+            padding: '12px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backgroundColor: '#0f172a',
+            color: '#ffffff',
+            outline: 'none',
+            fontSize: '14px'
+          }}
         />
         <button 
-          onClick={sendMessage} 
-          style={{ background: '#007bff', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+          type="submit" 
+          style={{
+            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+            color: '#ffffff',
+            border: 'none',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
         >
-          Send
+          Send 🚀
         </button>
-      </div>
+      </form>
     </div>
   );
 }
