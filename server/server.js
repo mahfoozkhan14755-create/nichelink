@@ -101,6 +101,20 @@ io.on('connection', (socket) => {
     socket.to(data.room).emit('receive_message', data);
   });
 
+  // Community Room & Live Chat Sync Listeners
+  socket.on('join_community', (communityId) => {
+    socket.join(communityId);
+  });
+
+  socket.on('leave_community', (communityId) => {
+    socket.leave(communityId);
+  });
+
+  // Updated to socket.to so sender doesn't receive duplicate messages
+  socket.on('send_community_message', (data) => {
+    socket.to(data.communityId).emit('receive_community_message', data);
+  });
+
   socket.on('disconnect', () => {
     console.log(`User Disconnected: ${socket.id}`);
   });

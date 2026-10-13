@@ -1,15 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
 import JobBoard from './JobBoard';
 import Chats from './Chats';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : 'https://nichelink-backend.onrender.com';
+
+const socket = io(API_BASE_URL, {
+  transports: ['websocket', 'polling']
+});
 
 function Dashboard() {
   const [userProfile, setUserProfile] = useState(null);
-  const [activeTab, setActiveTab] = useState('jobs'); 
+  const [activeTab, setActiveTab] = useState('communities'); 
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [communityPosts, setCommunityPosts] = useState([]);
+  const [newContent, setNewContent] = useState('');
   const navigate = useNavigate();
+
+  const communitiesList = [
+    { id: 'saas-devs', name: 'SaaS Developers', description: 'Discuss SaaS architecture, scaling, and backend code.' },
+    { id: 'digital-nomads', name: 'Digital Nomads', description: 'Remote work lifestyle, travel setups, and global hubs.' },
+    { id: 'tech-writers', name: 'Technical Writers', description: 'Documentation, API guides, and developer content.' }
+  ];
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -36,6 +52,83 @@ function Dashboard() {
 
     fetchDashboardData();
   }, [navigate]);
+
+  useEffect(() => {
+    if (selectedCommunity) {
+      fetchCommunityPosts(selectedCommunity.id);
+
+      socket.emit('join_community', selectedCommunity.id);
+
+      const handleCommunityMessage = (data) => {
+        if (data.communityId === selectedCommunity.id) {
+          setCommunityPosts((prev) => {
+            const exists = prev.some(p => p._id === data._id);
+            if (exists) return prev;
+            return [data, ...prev];
+          });
+        }
+      };
+
+      socket.on('receive_community_message', handleCommunityMessage);
+
+      return () => {
+        socket.emit('leave_community', selectedCommunity.id);
+        socket.off('receive_community_message', handleCommunityMessage);
+      };
+    }
+  }, [selectedCommunity]);
+
+  const fetchCommunityPosts = async (communityId) => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/posts/${communityId}`);
+      if (Array.isArray(res.data)) {
+        setCommunityPosts(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching community posts:', err);
+      setCommunityPosts([]);
+    }
+  };
+
+  const handleCreatePost = async (e) => {
+    e.preventDefault();
+    if (!newContent.trim() || !selectedCommunity) return;
+
+    const tempId = Date.now().toString();
+    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const authorName = userProfile?.username || 'Member';
+    
+    const messageData = {
+      _id: tempId,
+      communityId: selectedCommunity.id,
+      author: authorName,
+      content: newContent,
+      createdAt: currentTime
+    };
+
+    // Instant local state update for sender
+    setCommunityPosts((prev) => [messageData, ...prev]);
+    const textToSend = newContent;
+    setNewContent('');
+
+    // Emit live message via Socket.io to other users in the same room
+    socket.emit('send_community_message', messageData);
+
+    // Save to Database via API with exact communityId
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/posts`, {
+        communityId: selectedCommunity.id,
+        author: authorName,
+        content: textToSend,
+        createdAt: currentTime
+      });
+      if (res.data) {
+        setCommunityPosts((prev) => prev.map(p => p._id === tempId ? res.data : p));
+      }
+    } catch (err) {
+      console.error('API Save error:', err);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -67,6 +160,12 @@ function Dashboard() {
         </div>
 
         <nav style={styles.navStack}>
+          <button 
+            onClick={() => { setActiveTab('communities'); setSelectedCommunity(null); }} 
+            style={activeTab === 'communities' ? styles.navBtnActive : styles.navBtn}
+          >
+            🌐 Communities & Boards
+          </button>
           <button 
             onClick={() => setActiveTab('jobs')} 
             style={activeTab === 'jobs' ? styles.navBtnActive : styles.navBtn}
@@ -100,8 +199,9 @@ function Dashboard() {
         <header style={styles.topHeader}>
           <div>
             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: '#f8fafc' }}>
+              {activeTab === 'communities' && (selectedCommunity ? `Community: ${selectedCommunity.name}` : 'Select a Micro-Community')}
               {activeTab === 'jobs' && 'NicheLink Job Board'}
-              {activeTab === 'chats' && 'Live Chat Communications'}
+              {activeTab === 'chats' && 'Live Global Chat Communications'}
               {activeTab === 'upgrade' && 'Account Subscription'}
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
@@ -130,6 +230,68 @@ function Dashboard() {
 
         {/* Dynamic Body Content Area */}
         <main style={styles.contentArea}>
+          {activeTab === 'communities' && !selectedCommunity && (
+            <div>
+              <h3 style={{ color: '#f8fafc', marginBottom: '20px' }}>Choose a Community to Enter:</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                {communitiesList.map((comm) => (
+                  <div key={comm.id} style={styles.communityCard}>
+                    <h4 style={{ color: '#818cf8', fontSize: '18px', margin: '0 0 10px 0' }}>{comm.name}</h4>
+                    <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 20px 0', lineHeight: '1.5' }}>{comm.description}</p>
+                    <button 
+                      style={styles.primaryBtn} 
+                      onClick={() => setSelectedCommunity(comm)}
+                    >
+                      Enter Community 🚀
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'communities' && selectedCommunity && (
+            <div>
+              <button 
+                onClick={() => setSelectedCommunity(null)} 
+                style={styles.backBtn}
+              >
+                ← Back to Communities
+              </button>
+
+              <div style={styles.cardPanel}>
+                <h3 style={{ margin: '0 0 15px 0', color: '#f8fafc' }}>What's on your mind?</h3>
+                <form onSubmit={handleCreatePost} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <textarea 
+                    placeholder="Share your thoughts with the community..." 
+                    value={newContent} 
+                    onChange={(e) => setNewContent(e.target.value)} 
+                    style={{ ...styles.inputField, height: '90px', resize: 'vertical' }}
+                    required
+                  />
+                  <button type="submit" style={styles.primaryBtn}>Post to Community ⚡</button>
+                </form>
+              </div>
+
+              <div style={{ marginTop: '20px' }}>
+                <h3 style={{ color: '#f8fafc', marginBottom: '15px' }}>Community Feed & Live Chats</h3>
+                {communityPosts.length === 0 ? (
+                  <p style={{ color: '#94a3b8' }}>No chats in this community yet. Start the conversation!</p>
+                ) : (
+                  communityPosts.map((post, idx) => (
+                    <div key={post._id || idx} style={styles.cardPanel}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                        <strong style={{ color: '#818cf8' }}>{post.author?.username || post.author || 'Member'}</strong>
+                        <span style={{ color: '#64748b' }}>{post.createdAt || 'Just now'}</span>
+                      </div>
+                      <p style={{ color: '#cbd5e1', fontSize: '15px', margin: 0, lineHeight: '1.5' }}>{post.content}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'jobs' && <JobBoard userProfile={userProfile} />}
           {activeTab === 'chats' && <Chats />}
 
@@ -303,6 +465,48 @@ const styles = {
     padding: '22px',
     marginBottom: '20px',
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+  },
+  communityCard: {
+    background: '#1e293b',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '14px',
+    padding: '25px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between'
+  },
+  inputField: {
+    width: '100%',
+    padding: '12px',
+    borderRadius: '8px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#0f172a',
+    color: '#ffffff',
+    outline: 'none',
+    boxSizing: 'border-box',
+    fontSize: '14px',
+  },
+  primaryBtn: {
+    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+    color: '#ffffff',
+    border: 'none',
+    padding: '10px 18px',
+    borderRadius: '8px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    alignSelf: 'flex-start',
+  },
+  backBtn: {
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: '#f8fafc',
+    border: 'none',
+    padding: '8px 14px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    marginBottom: '20px',
+    fontSize: '13px'
   },
   upgradeBtn: {
     background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',

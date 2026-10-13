@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const Post = require('../models/Post');
 
-// Get posts for a specific community
+// Get posts for a specific community using route param
 router.get('/:communityId', async (req, res) => {
   try {
     const posts = await Post.find({ communityId: req.params.communityId }).sort({ _id: -1 });
