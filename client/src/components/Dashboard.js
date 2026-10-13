@@ -9,8 +9,13 @@ const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:5000' 
   : 'https://nichelink-backend.onrender.com';
 
+// Enhanced socket instance with forced new connection and reconnection settings
 const socket = io(API_BASE_URL, {
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  forceNew: true,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000
 });
 
 function Dashboard() {
@@ -438,7 +443,7 @@ const styles = {
     background: '#1e293b',
     padding: '8px 16px',
     borderRadius: '30px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 2, 0.08)',
   },
   avatar: {
     width: '36px',
