@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
-const PostSchema = new mongoose.Schema({
+const postSchema = new mongoose.Schema({
   communityId: { type: String, required: true },
   author: { type: String, required: true },
   content: { type: String, required: true },
-  createdAt: { type: String, required: true }
+  createdAt: { type: String }
 });
 
-module.exports = mongoose.model('Post', PostSchema);
+module.exports = mongoose.model('Post', postSchema);
