@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000' 
-  : 'https://nichelink-backend.onrender.com';
+// Force local backend URL for seamless local testing
+const API_BASE_URL = 'http://localhost:5000';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -22,12 +21,11 @@ function Register() {
     setLoading(true);
 
     try {
-      // Added a 15-second timeout to handle Render cold starts gracefully
-      const res = await axios.post(
-        `${API_BASE_URL}/api/auth/register`, 
-        { username, email, password },
-        { timeout: 15000 }
-      );
+      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, { 
+        username, 
+        email, 
+        password 
+      });
       
       setSuccess(res.data.message || 'Registration successful! Please login.');
       setTimeout(() => {
@@ -35,16 +33,10 @@ function Register() {
       }, 1500);
     } catch (err) {
       console.error('Registration error:', err);
-      let errorMsg = 'Registration failed. Please check your details or server connection.';
-      
-      if (err.code === 'ECONNABORTED') {
-        errorMsg = 'Server is waking up from sleep. Please try clicking Get Started again!';
-      } else if (err.response?.data?.message) {
-        errorMsg = err.response.data.message;
-      } else if (err.response?.data?.error) {
-        errorMsg = err.response.data.error;
-      }
-      
+      const errorMsg = 
+        err.response?.data?.message || 
+        err.response?.data?.error || 
+        'Registration failed. Please make sure your backend server is running on port 5000.';
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -139,7 +131,7 @@ function Register() {
               boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
             }}
           >
-            {loading ? 'Connecting to Server...' : 'Get Started 🚀'}
+            {loading ? 'Registering...' : 'Get Started 🚀'}
           </button>
         </form>
 
