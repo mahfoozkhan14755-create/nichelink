@@ -7,9 +7,8 @@ import Chats from './Chats';
 
 const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:5000' 
-  : 'https://nichelink-backend.onrender.com';
+  : 'https://nichelink-exke.onrender.com';
 
-// Enhanced socket instance with forced new connection and reconnection settings
 const socket = io(API_BASE_URL, {
   transports: ['websocket', 'polling'],
   forceNew: true,
@@ -111,15 +110,12 @@ function Dashboard() {
       createdAt: currentTime
     };
 
-    // Instant local state update for sender
     setCommunityPosts((prev) => [messageData, ...prev]);
     const textToSend = newContent;
     setNewContent('');
 
-    // Emit live message via Socket.io to other users in the same room
     socket.emit('send_community_message', messageData);
 
-    // Persist to Database via API
     try {
       const res = await axios.post(`${API_BASE_URL}/api/posts`, {
         communityId: selectedCommunity.id,
@@ -157,7 +153,6 @@ function Dashboard() {
 
   return (
     <div style={styles.container}>
-      {/* Sidebar Navigation */}
       <aside style={styles.sidebar}>
         <div style={styles.brandGroup}>
           <div style={styles.brandBadge}>NL</div>
@@ -198,9 +193,7 @@ function Dashboard() {
         </div>
       </aside>
 
-      {/* Main Content View Pane */}
       <div style={styles.mainPane}>
-        {/* Top Header Bar */}
         <header style={styles.topHeader}>
           <div>
             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: '#f8fafc' }}>
@@ -233,7 +226,6 @@ function Dashboard() {
           )}
         </header>
 
-        {/* Dynamic Body Content Area */}
         <main style={styles.contentArea}>
           {activeTab === 'communities' && !selectedCommunity && (
             <div>
@@ -324,7 +316,6 @@ function Dashboard() {
   );
 }
 
-// Modern Midnight Blue Stylesheet
 const styles = {
   container: {
     display: 'flex',
@@ -443,7 +434,7 @@ const styles = {
     background: '#1e293b',
     padding: '8px 16px',
     borderRadius: '30px',
-    border: '1px solid rgba(255, 255, 2, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
   },
   avatar: {
     width: '36px',
@@ -485,7 +476,7 @@ const styles = {
     width: '100%',
     padding: '12px',
     borderRadius: '8px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 25, 0.1)',
     backgroundColor: '#0f172a',
     color: '#ffffff',
     outline: 'none',
