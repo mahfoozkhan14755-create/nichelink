@@ -14,13 +14,11 @@ router.post('/register', async (req, res) => {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ 
       username: username.trim(), 
@@ -93,12 +91,12 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// PROFILE ROUTE (Protected)
+// PROFILE ROUTE
 router.get('/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'No token provided, authorization denied' });
+      return res.status(401).json({ message: 'No token provided' });
     }
 
     const token = authHeader.split(' ')[1];
@@ -111,12 +109,11 @@ router.get('/profile', async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    console.error('Profile fetch error:', err);
     res.status(401).json({ message: 'Token is not valid' });
   }
 });
 
-// UPGRADE ROUTE (Pro Tier Simulation)
+// UPGRADE ROUTE
 router.put('/upgrade', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -135,7 +132,6 @@ router.put('/upgrade', async (req, res) => {
 
     res.json(updatedUser);
   } catch (err) {
-    console.error('Upgrade error:', err);
     res.status(500).json({ error: 'Server error during upgrade' });
   }
 });
