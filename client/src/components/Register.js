@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : 'https://nichelink-backend.onrender.com';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -19,16 +21,13 @@ function Register() {
       alert('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
-      console.error('Full registration error:', err);
-      // Catch all possible error structures from backend or network
+      console.error('Registration error:', err);
       const errorMsg = 
         err.response?.data?.error || 
         err.response?.data?.message || 
-        err.response?.data || 
         err.message || 
         'Registration failed';
-      
-      setError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+      setError(errorMsg);
     }
   };
 
