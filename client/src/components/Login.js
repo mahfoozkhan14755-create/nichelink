@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : 'https://nichelink-exke.onrender.com';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -16,7 +18,9 @@ function Login() {
     try {
       const res = await axios.post(`${API_BASE_URL}/api/auth/login`, { email, password });
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      if (res.data.user) {
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+      }
       navigate('/dashboard');
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Invalid credentials';

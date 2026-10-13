@@ -36,7 +36,6 @@ function Dashboard() {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          localStorage.clear();
           navigate('/login', { replace: true });
           return;
         }
@@ -49,8 +48,18 @@ function Dashboard() {
         setUserProfile(profileRes.data);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        localStorage.clear();
-        navigate('/login', { replace: true });
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          try {
+            setUserProfile(JSON.parse(savedUser));
+          } catch (e) {
+            localStorage.clear();
+            navigate('/login', { replace: true });
+          }
+        } else {
+          localStorage.clear();
+          navigate('/login', { replace: true });
+        }
       }
     };
 
@@ -476,7 +485,7 @@ const styles = {
     width: '100%',
     padding: '12px',
     borderRadius: '8px',
-    border: '1px solid rgba(255, 255, 25, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
     backgroundColor: '#0f172a',
     color: '#ffffff',
     outline: 'none',
