@@ -1,80 +1,132 @@
 const router = require('express').Router();
-const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-// Register
+// REGISTER ROUTE
 router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
-
-    // Check if email already exists
-    const existingEmail = await User.findOne({ email });
-    if (existingEmail) {
-      return res.status(400).json({ error: 'Email already exists' });
+    
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Check if username already exists
-    const existingUsername = await User.findOne({ username });
-    if (existingUsername) {
-      return res.status(400).json({ error: 'Username already taken' });
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: cleanEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ 
+      username: username.trim(), 
+      email: cleanEmail, 
+      password: hashedPassword 
+    });
 
-    const newUser = new User({ username, email, password: hashedPassword });
-    const savedUser = await newUser.save();
-    res.status(201).json(savedUser);
+    await newUser.save();
+
+    const token = jwt.sign(
+      { id: newUser._id }, 
+      process.env.JWT_SECRET || 'secretkey', 
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({ 
+      token, 
+      user: { 
+        id: newUser._id, 
+        username: newUser.username, 
+        email: newUser.email, 
+        isPro: newUser.isPro 
+      } 
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Register error:', err);
+    res.status(500).json({ error: 'Server error during registration' });
   }
 });
 
-// Login
+// LOGIN ROUTE
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found with this email' });
+    
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
+
+    if (!user) {
+      return res.status(400).json({ message: 'User not found with this email' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials or incorrect password' });
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
-    const token = jwt.sign({ id: user._id, isPro: user.isPro }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
-    res.json({ token, user: { id: user._id, username: user.username, email: user.email, isPro: user.isPro } });
+    const token = jwt.sign(
+      { id: user._id }, 
+      process.env.JWT_SECRET || 'secretkey', 
+      { expiresIn: '7d' }
+    );
+
+    res.json({ 
+      token, 
+      user: { 
+        id: user._id, 
+        username: user.username, 
+        email: user.email, 
+        isPro: user.isPro 
+      } 
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login' });
   }
 });
 
-// Get User Profile
+// PROFILE ROUTE (Protected)
 router.get('/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ message: 'No token provided' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No token provided, authorization denied' });
+    }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
     
     const user = await User.findById(decoded.id).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     res.json(user);
   } catch (err) {
+    console.error('Profile fetch error:', err);
     res.status(401).json({ message: 'Token is not valid' });
   }
 });
 
-// Upgrade user to Pro permanently
+// UPGRADE ROUTE (Pro Tier Simulation)
 router.put('/upgrade', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ message: 'No token provided' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
     const updatedUser = await User.findByIdAndUpdate(
       decoded.id, 
       { isPro: true }, 
@@ -83,7 +135,8 @@ router.put('/upgrade', async (req, res) => {
 
     res.json(updatedUser);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Upgrade error:', err);
+    res.status(500).json({ error: 'Server error during upgrade' });
   }
 });
 
