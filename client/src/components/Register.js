@@ -22,18 +22,29 @@ function Register() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, { username, email, password });
+      // Added a 15-second timeout to handle Render cold starts gracefully
+      const res = await axios.post(
+        `${API_BASE_URL}/api/auth/register`, 
+        { username, email, password },
+        { timeout: 15000 }
+      );
+      
       setSuccess(res.data.message || 'Registration successful! Please login.');
       setTimeout(() => {
         navigate('/login');
       }, 1500);
     } catch (err) {
       console.error('Registration error:', err);
-      const errorMsg = 
-        err.response?.data?.message || 
-        err.response?.data?.error || 
-        err.message || 
-        'Registration failed. User already exists or server is waking up.';
+      let errorMsg = 'Registration failed. Please check your details or server connection.';
+      
+      if (err.code === 'ECONNABORTED') {
+        errorMsg = 'Server is waking up from sleep. Please try clicking Get Started again!';
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMsg = err.response.data.error;
+      }
+      
       setError(errorMsg);
     } finally {
       setLoading(false);
