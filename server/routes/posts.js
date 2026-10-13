@@ -1,35 +1,39 @@
 const router = require('express').Router();
 const Post = require('../models/Post');
 
-// Get posts for a specific community using route param
+// Get posts for a specific community
 router.get('/:communityId', async (req, res) => {
   try {
-    const posts = await Post.find({ communityId: req.params.communityId }).sort({ _id: -1 });
+    const { communityId } = req.params;
+    const posts = await Post.find({ communityId }).sort({ _id: -1 });
     res.json(posts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching posts:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Create a new post
+// Create a new post in a community
 router.post('/', async (req, res) => {
   try {
     const { communityId, author, content, createdAt } = req.body;
-    const newPost = new Post({ communityId, author, content, createdAt });
+    
+    if (!communityId || !content) {
+      return res.status(400).json({ error: 'Community ID and content are required' });
+    }
+
+    const newPost = new Post({
+      communityId,
+      author: author || 'Member',
+      content,
+      createdAt: createdAt || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+
     const savedPost = await newPost.save();
     res.status(201).json(savedPost);
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Dedicated endpoint to clear all community posts instantly
-router.delete('/clear-all', async (req, res) => {
-  try {
-    await Post.deleteMany({});
-    res.status(200).json({ message: 'All community posts and chats wiped successfully!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error saving post:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
